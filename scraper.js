@@ -156,7 +156,7 @@ async function run() {
     console.log(`   📝  History updated (${history.length} entries).`);
 
     // Output the filename so the workflow step can read it
-    console.log(`::set-output name=pdf_name::${pdfName}`);
+    // console.log(`::set-output name=pdf_name::${pdfName}`);
 
   } catch (err) {
     console.error(`   ❌  Error: ${err.message}`);
