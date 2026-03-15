@@ -52,7 +52,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           # Stage all new PDFs and the updated history file
-          git add "*.pdf" linkHistory.json
+          git add "scrapped/*.pdf" linkHistory.json
 
           # Only commit if there is actually something new to commit
           if git diff --cached --quiet; then
