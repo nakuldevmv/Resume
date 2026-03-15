@@ -130,7 +130,7 @@ jobs:
           TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M UTC")
           curl -s \
             -F "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
-            -F "document=@temp_unzipped/temp_private_resume.pdf;filename=Nakul_Dev_M_V_Resume_Private.pdf" \
+            -F "document=@temp_unzipped/temp_private_resume.pdf;filename=Nakul_Dev_M_V_Resume.pdf" \
             -F "caption=📄 Private Resume — $TIMESTAMP" \
             "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendDocument"
           echo "   ✅  Sent to Telegram."
