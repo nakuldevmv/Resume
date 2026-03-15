@@ -2,11 +2,16 @@ name: Overleaf PDF Scraper
 
 on:
   schedule:
-    # Runs every day at 06:00 UTC
-    - cron: "*/10 * * * *"
-
-  # Allow manual trigger from the Actions tab at any time
+  
+    # in a regular interval of time
+    - cron: "0 * * * *"
+  
+  # manual — via Actions tab
   workflow_dispatch:
+  
+  # via API — event_type must match this exactly
+  repository_dispatch:
+    types: [visitor-trigger]
 
 permissions:
   contents: write
