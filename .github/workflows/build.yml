@@ -2,32 +2,30 @@ name: Overleaf PDF Scraper
 
 on:
   schedule:
-    # Runs every 5 minutes
-    # Note: GitHub may delay scheduled runs by a few minutes under high load
-    - cron: "*/5 * * * *"
+    # Runs every day at 06:00 UTC
+    - cron: "0 6 * * *"
 
   # Allow manual trigger from the Actions tab at any time
   workflow_dispatch:
 
 permissions:
-  contents: write   # needed to push commits back to the repo
+  contents: write
 
 jobs:
   scrape-and-push:
     runs-on: ubuntu-latest
-    timeout-minutes: 10   # kill the job if it hangs
+    timeout-minutes: 10
 
     steps:
       # ── 1. Check out the repository ────────────────────────────────────────
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
         with:
-          # Fetch full history so git log / numbering based on existing PDFs works
           fetch-depth: 0
 
       # ── 2. Set up Node.js ──────────────────────────────────────────────────
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v4.4.0
         with:
           node-version: "20"
           cache: "npm"
@@ -42,23 +40,22 @@ jobs:
 
       # ── 5. Run the scraper ─────────────────────────────────────────────────
       - name: Run scraper
-        id: scraper
         run: node scraper.js
 
-      # ── 6. Commit and push the new PDF + updated history ───────────────────
+      # ── 6. Commit and push changes ─────────────────────────────────────────
       - name: Commit and push changes
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Stage all new PDFs and the updated history file
-          git add "*.pdf" linkHistory.json
+          # Stage new/updated PDFs in both locations, deleted old ones, and history
+          git add Nakul_Dev_M_V_Resume.pdf scrapped/ linkHistory.json
 
-          # Only commit if there is actually something new to commit
+          # Only commit if there is actually something new
           if git diff --cached --quiet; then
-            echo "Nothing new to commit — PDF may already be up to date."
+            echo "Nothing new to commit."
           else
             TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M UTC")
-            git commit -m "feat: add scraped PDF [$TIMESTAMP]"
+            git commit -m "feat: update resume [$TIMESTAMP]"
             git push
           fi

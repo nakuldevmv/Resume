@@ -7,10 +7,16 @@ const http = require("http");
 // ─── Config ───────────────────────────────────────────────────────────────────
 const TARGET_URL = "https://www.overleaf.com/read/tjkyqztqyctw#de5d03";
 const OVERLEAF_BASE = "https://www.overleaf.com";
-const OUTPUT_DIR = __dirname;
-const HISTORY_FILE = path.join(OUTPUT_DIR, "linkHistory.json");
+const ROOT_DIR = __dirname;
+const SCRAPPED_DIR = path.join(ROOT_DIR, "scrapped");
+const HISTORY_FILE = path.join(ROOT_DIR, "linkHistory.json");
 const PDF_BASE_NAME = "resume";
+const ROOT_PDF_NAME = "Nakul_Dev_M_V_Resume.pdf";
+const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 // ──────────────────────────────────────────────────────────────────────────────
+
+// Ensure scrapped/ folder exists
+if (!fs.existsSync(SCRAPPED_DIR)) fs.mkdirSync(SCRAPPED_DIR);
 
 function loadHistory() {
   if (fs.existsSync(HISTORY_FILE)) {
@@ -29,13 +35,30 @@ function saveHistory(history) {
 
 function nextPdfName() {
   const existing = fs
-    .readdirSync(OUTPUT_DIR)
+    .readdirSync(SCRAPPED_DIR)
     .filter((f) => /^resume\d+\.pdf$/i.test(f))
     .map((f) => parseInt(f.replace(/\D/g, ""), 10))
     .filter((n) => !isNaN(n));
 
   const nextNum = existing.length > 0 ? Math.max(...existing) + 1 : 1;
   return `${PDF_BASE_NAME}${String(nextNum).padStart(2, "0")}.pdf`;
+}
+
+/** Delete numbered resumes in scrapped/ that are older than 1 week */
+function cleanOldScrapped() {
+  const now = Date.now();
+  const files = fs
+    .readdirSync(SCRAPPED_DIR)
+    .filter((f) => /^resume\d+\.pdf$/i.test(f));
+
+  for (const f of files) {
+    const filePath = path.join(SCRAPPED_DIR, f);
+    const { mtimeMs } = fs.statSync(filePath);
+    if (now - mtimeMs > ONE_WEEK_MS) {
+      fs.unlinkSync(filePath);
+      console.log(`   🗑️  Deleted old scrapped PDF: ${f}`);
+    }
+  }
 }
 
 function downloadFile(url, destPath, cookies) {
@@ -138,28 +161,40 @@ async function run() {
     console.log(`   ↳ Extracted link: ${fullUrl}`);
 
     const cookies = await context.cookies();
+
+    // ── 1. Save numbered copy to scrapped/ ──────────────────────────────────
     const pdfName = nextPdfName();
-    const destPath = path.join(OUTPUT_DIR, pdfName);
+    const scrappedPath = path.join(SCRAPPED_DIR, pdfName);
+    console.log(`   ↳ Downloading → scrapped/${pdfName}`);
+    await downloadFile(fullUrl, scrappedPath, cookies);
+    console.log(`   ✅  Saved: scrapped/${pdfName}`);
 
-    console.log(`   ↳ Downloading → ${pdfName}`);
-    await downloadFile(fullUrl, destPath, cookies);
-    console.log(`   ✅  Saved: ${pdfName}`);
+    // ── 2. Overwrite root copy with fixed name ───────────────────────────────
+    const rootPdfPath = path.join(ROOT_DIR, ROOT_PDF_NAME);
+    if (fs.existsSync(rootPdfPath)) {
+      fs.unlinkSync(rootPdfPath);
+      console.log(`   🗑️  Removed old root PDF: ${ROOT_PDF_NAME}`);
+    }
+    fs.copyFileSync(scrappedPath, rootPdfPath);
+    console.log(`   ✅  Updated root PDF: ${ROOT_PDF_NAME}`);
 
+    // ── 3. Clean scrapped/ files older than 1 week ──────────────────────────
+    cleanOldScrapped();
+
+    // ── 4. Update history ───────────────────────────────────────────────────
     const history = loadHistory();
     history.push({
       timestamp: new Date().toISOString(),
-      filename: pdfName,
+      scrappedFile: `scrapped/${pdfName}`,
+      rootFile: ROOT_PDF_NAME,
       link: fullUrl,
     });
     saveHistory(history);
     console.log(`   📝  History updated (${history.length} entries).`);
 
-    // Output the filename so the workflow step can read it
-    console.log(`::set-output name=pdf_name::${pdfName}`);
-
   } catch (err) {
     console.error(`   ❌  Error: ${err.message}`);
-    process.exit(1); // non-zero exit so the workflow marks it as failed
+    process.exit(1);
   } finally {
     await browser.close();
   }
