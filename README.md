@@ -19,8 +19,8 @@ A GitHub Actions workflow runs daily at 06:00 UTC. It opens the Overleaf project
 
 **1. Clone and install**
 ```bash
-git clone https://github.com/YOUR_USERNAME/YOUR_REPO.git
-cd YOUR_REPO
+git clone https://github.com/nakuldevmv/Resume.git
+cd Resume
 npm install
 npx playwright install chromium
 ```
