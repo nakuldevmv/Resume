@@ -1,0 +1,64 @@
+name: Overleaf PDF Scraper
+
+on:
+  schedule:
+    # Runs every 5 minutes
+    # Note: GitHub may delay scheduled runs by a few minutes under high load
+    - cron: "*/5 * * * *"
+
+  # Allow manual trigger from the Actions tab at any time
+  workflow_dispatch:
+
+permissions:
+  contents: write   # needed to push commits back to the repo
+
+jobs:
+  scrape-and-push:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10   # kill the job if it hangs
+
+    steps:
+      # ── 1. Check out the repository ────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Fetch full history so git log / numbering based on existing PDFs works
+          fetch-depth: 0
+
+      # ── 2. Set up Node.js ──────────────────────────────────────────────────
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      # ── 3. Install npm dependencies ────────────────────────────────────────
+      - name: Install dependencies
+        run: npm ci
+
+      # ── 4. Install Playwright's Chromium browser ───────────────────────────
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      # ── 5. Run the scraper ─────────────────────────────────────────────────
+      - name: Run scraper
+        id: scraper
+        run: node scraper.js
+
+      # ── 6. Commit and push the new PDF + updated history ───────────────────
+      - name: Commit and push changes
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Stage all new PDFs and the updated history file
+          git add "*.pdf" linkHistory.json
+
+          # Only commit if there is actually something new to commit
+          if git diff --cached --quiet; then
+            echo "Nothing new to commit — PDF may already be up to date."
+          else
+            TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M UTC")
+            git commit -m "feat: add scraped PDF [$TIMESTAMP]"
+            git push
+          fi
