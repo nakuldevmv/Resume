@@ -1,0 +1,140 @@
+name: Private Resume
+
+on:
+  # Run on a schedule — every day at 07:00 UTC (1 hour after the public one)
+  schedule:
+    - cron: "0 7 * * *"
+
+  # Manual trigger with a choice of what to do
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "What to do"
+        required: true
+        default: "scrape"
+        type: choice
+        options:
+          - scrape        # fetch latest PDF, zip it, push to repo
+          - send          # unzip existing zip and send to Telegram
+
+permissions:
+  contents: write
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # JOB 1 — Scrape → Zip with password → Push to privateResume/
+  # Runs on: schedule OR manual trigger with action = "scrape"
+  # ─────────────────────────────────────────────────────────────────────────────
+  scrape-and-zip:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.event_name == 'schedule' || github.event.inputs.action == 'scrape'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4.4.0
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      # ── Step 1: Download the resume PDF to a temp file ──────────────────────
+      - name: Scrape private resume
+        run: node scraper-private.js
+
+      # ── Step 2: Install zip utility ─────────────────────────────────────────
+      - name: Install zip
+        run: sudo apt-get install -y zip
+
+      # ── Step 3: Delete existing zip if it exists ────────────────────────────
+      - name: Remove existing zip
+        run: |
+          mkdir -p privateResume
+          if [ -f "privateResume/Nakul_Dev_M_V_Resume_Private.zip" ]; then
+            rm privateResume/Nakul_Dev_M_V_Resume_Private.zip
+            echo "   🗑️  Deleted old zip."
+          else
+            echo "   ℹ️  No existing zip found."
+          fi
+
+      # ── Step 4: Zip the PDF with a password ─────────────────────────────────
+      - name: Zip resume with password
+        run: |
+          zip --password "${{ secrets.ZIP_PASSWORD }}" \
+            privateResume/Nakul_Dev_M_V_Resume_Private.zip \
+            temp_private_resume.pdf
+          echo "   ✅  Zipped successfully."
+
+      # ── Step 5: Delete the unzipped temp PDF so it never gets committed ──────
+      - name: Delete temp PDF
+        run: |
+          rm temp_private_resume.pdf
+          echo "   🗑️  Temp PDF deleted."
+
+      # ── Step 6: Commit and push the zip ─────────────────────────────────────
+      - name: Commit and push zip
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add privateResume/Nakul_Dev_M_V_Resume_Private.zip
+
+          if git diff --cached --quiet; then
+            echo "Nothing new to commit."
+          else
+            TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M UTC")
+            git commit -m "chore: update private resume zip [$TIMESTAMP]"
+            git push
+          fi
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # JOB 2 — Unzip existing zip → Send PDF to Telegram
+  # Runs on: manual trigger with action = "send" ONLY
+  # The unzipped PDF is NEVER committed — it only lives on the runner temporarily
+  # ─────────────────────────────────────────────────────────────────────────────
+  send-to-telegram:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: github.event.inputs.action == 'send'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4.2.2
+
+      - name: Install unzip
+        run: sudo apt-get install -y unzip
+
+      # ── Step 1: Unzip using the password secret ──────────────────────────────
+      - name: Unzip private resume
+        run: |
+          unzip -P "${{ secrets.ZIP_PASSWORD }}" \
+            privateResume/Nakul_Dev_M_V_Resume_Private.zip \
+            -d temp_unzipped/
+          echo "   ✅  Unzipped."
+
+      # ── Step 2: Send to Telegram ─────────────────────────────────────────────
+      - name: Send PDF via Telegram
+        run: |
+          TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M UTC")
+          curl -s \
+            -F "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -F "document=@temp_unzipped/temp_private_resume.pdf;filename=Nakul_Dev_M_V_Resume_Private.pdf" \
+            -F "caption=📄 Private Resume — $TIMESTAMP" \
+            "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendDocument"
+          echo "   ✅  Sent to Telegram."
+
+      # ── Step 3: Delete temp unzipped folder (safety cleanup) ────────────────
+      - name: Cleanup temp files
+        run: |
+          rm -rf temp_unzipped/
+          echo "   🗑️  Temp files cleaned up."
