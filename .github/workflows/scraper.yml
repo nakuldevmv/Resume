@@ -54,7 +54,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           # Stage new/updated PDFs in both locations, deleted old ones, and history
-          git add Nakul_Dev_M_V_Resume.pdf scrapped/ linkHistory.json
+          git add Nakul_Dev_M_V_Resume.pdf scrapped/ History.json
 
           # Only commit if there is actually something new
           if git diff --cached --quiet; then
