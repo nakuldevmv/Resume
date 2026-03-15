@@ -1,9 +1,8 @@
 name: Private Resume
 
 on:
-  # Run on a schedule — every day at 07:00 UTC (1 hour after the public one)
   schedule:
-    - cron: "0 7 * * *"
+    - cron: "0 0 * * *"
 
   # Manual trigger with a choice of what to do
   workflow_dispatch:
