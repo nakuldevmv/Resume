@@ -71,8 +71,10 @@ jobs:
 
       # ── Step 4: Zip the PDF with a password ─────────────────────────────────
       - name: Zip resume with password
+        env:
+          ZIP_PASS: ${{ secrets.ZIP_PASSWORD }}
         run: |
-          zip --password "${{ secrets.ZIP_PASSWORD }}" \
+          zip --password "$ZIP_PASS" \
             privateResume/Nakul_Dev_M_V_Resume_Private.zip \
             temp_private_resume.pdf
           echo "   ✅  Zipped successfully."
@@ -101,7 +103,7 @@ jobs:
 
   # ─────────────────────────────────────────────────────────────────────────────
   # JOB 2 — Unzip existing zip → Send PDF to Telegram
-  # Runs on: manual trigger with action = "send" ONLY
+  # Runs automatically after Job 1, or manually with action = "send"
   # The unzipped PDF is NEVER committed — it only lives on the runner temporarily
   # ─────────────────────────────────────────────────────────────────────────────
   send-to-telegram:
@@ -123,8 +125,10 @@ jobs:
 
       # ── Step 1: Unzip using the password secret ──────────────────────────────
       - name: Unzip private resume
+        env:
+          ZIP_PASS: ${{ secrets.ZIP_PASSWORD }}
         run: |
-          unzip -P "${{ secrets.ZIP_PASSWORD }}" \
+          unzip -P "$ZIP_PASS" \
             privateResume/Nakul_Dev_M_V_Resume_Private.zip \
             -d temp_unzipped/
           echo "   ✅  Unzipped."
