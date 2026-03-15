@@ -50,7 +50,9 @@ jobs:
 
       # ── Step 1: Download the resume PDF to a temp file ──────────────────────
       - name: Scrape private resume
-        run: node scraper-private.js
+        env:
+          OVERLEAF_PRIVATE_URL: ${{ secrets.PRIVATE_OVERLEAF_URL }}
+        run: node privateResume/scraper-private.js
 
       # ── Step 2: Install zip utility ─────────────────────────────────────────
       - name: Install zip
