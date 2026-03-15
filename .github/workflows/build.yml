@@ -20,14 +20,14 @@ jobs:
     steps:
       # ── 1. Check out the repository ────────────────────────────────────────
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
         with:
           # Fetch full history so git log / numbering based on existing PDFs works
           fetch-depth: 0
 
       # ── 2. Set up Node.js ──────────────────────────────────────────────────
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v4.4.0
         with:
           node-version: "20"
           cache: "npm"
