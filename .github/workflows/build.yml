@@ -1,35 +1,25 @@
 name: Build Resume PDF
-
 on:
   workflow_dispatch:
   schedule:
     - cron: "*/30 * * * *"
-
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout (empty repo)
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Clone Overleaf project (use token from Secrets)
+      - name: Clone Overleaf project
         env:
           OVERLEAF_TOKEN: ${{ secrets.OVERLEAF_TOKEN }}
         run: |
-          # create a tiny askpass helper so git reads the token from the env
-          printf '#!/bin/sh\necho "$OVERLEAF_TOKEN"' > /tmp/git-askpass.sh
-          chmod +x /tmp/git-askpass.sh
-
-          # replace <PROJECT_ID> with your project id
           PROJECT_ID="69b65297c9c8842b2d6ed896"
+          git clone "https://git:${OVERLEAF_TOKEN}@git.overleaf.com/${PROJECT_ID}" project
 
-          # clone using username "git" so git prompts for password which GIT_ASKPASS supplies
-          GIT_ASKPASS=/tmp/git-askpass.sh git clone "https://git@git.overleaf.com/${PROJECT_ID}" project
-
-      - name: Build LaTeX (fast action)
+      - name: Build LaTeX
         uses: xu-cheng/latex-action@v2
         with:
           root_file: project/main.tex
