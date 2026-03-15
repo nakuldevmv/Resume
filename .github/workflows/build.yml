@@ -1,0 +1,49 @@
+name: Build Resume PDF
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/30 * * * *"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout (empty repo)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Clone Overleaf project (use token from Secrets)
+        env:
+          OVERLEAF_TOKEN: ${{ secrets.OVERLEAF_TOKEN }}
+        run: |
+          # create a tiny askpass helper so git reads the token from the env
+          printf '#!/bin/sh\necho "$OVERLEAF_TOKEN"' > /tmp/git-askpass.sh
+          chmod +x /tmp/git-askpass.sh
+
+          # replace <PROJECT_ID> with your project id
+          PROJECT_ID="69b65297c9c8842b2d6ed896"
+
+          # clone using username "git" so git prompts for password which GIT_ASKPASS supplies
+          GIT_ASKPASS=/tmp/git-askpass.sh git clone "https://git@git.overleaf.com/${PROJECT_ID}" project
+
+      - name: Build LaTeX (fast action)
+        uses: xu-cheng/latex-action@v2
+        with:
+          root_file: project/main.tex
+
+      - name: Copy generated PDF to repo root
+        run: |
+          cp project/main.pdf resume.pdf || cp project/*.pdf resume.pdf
+
+      - name: Commit and push resume.pdf
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "actions@github.com"
+          git add resume.pdf || true
+          git commit -m "ci: auto build resume" || echo "no changes to commit"
+          git push origin HEAD:main || echo "push failed or nothing to push"
