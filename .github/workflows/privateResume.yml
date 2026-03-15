@@ -107,7 +107,12 @@ jobs:
   send-to-telegram:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    if: github.event.inputs.action == 'send'
+    needs: scrape-and-zip
+    if: |
+      always() && (
+        needs.scrape-and-zip.result == 'success' ||
+        github.event.inputs.action == 'send'
+      )
 
     steps:
       - name: Checkout repository
