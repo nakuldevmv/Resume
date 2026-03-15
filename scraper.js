@@ -7,7 +7,8 @@ const http = require("http");
 // ─── Config ───────────────────────────────────────────────────────────────────
 const TARGET_URL = "https://www.overleaf.com/read/tjkyqztqyctw#de5d03";
 const OVERLEAF_BASE = "https://www.overleaf.com";
-const OUTPUT_DIR = __dirname;
+const OUTPUT_DIR = path.join(__dirname, "scrapped");
+if (!fs.existsSync(OUTPUT_DIR)) fs.mkdirSync(OUTPUT_DIR);
 const HISTORY_FILE = path.join(OUTPUT_DIR, "linkHistory.json");
 const PDF_BASE_NAME = "resume";
 // ──────────────────────────────────────────────────────────────────────────────
