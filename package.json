@@ -1,0 +1,23 @@
+{
+  "name": "resume",
+  "version": "1.0.0",
+  "description": "<!-- ## Links\r - Download Template : [Google Doc](https://docs.google.com/document/d/1Jklntw7Wrptdw2JAQt18lA4grPQTfHI60Q6bSjDHjG0/edit?usp=sharing)\r   - [VMock](https://www.vmock.com/) ATS Score: 88/100",
+  "main": "scraper.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nakuldevmv/Resume.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/nakuldevmv/Resume/issues"
+  },
+  "homepage": "https://github.com/nakuldevmv/Resume#readme",
+  "dependencies": {
+    "playwright": "^1.58.2"
+  }
+}
