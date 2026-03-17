@@ -139,6 +139,18 @@ async function run() {
     console.log("   ↳ Loading Overleaf page…");
     await page.goto(TARGET_URL, { waitUntil: "networkidle", timeout: 60_000 });
 
+    try {
+  console.log("   ↳ Checking for modal…");
+  await page.waitForSelector('button.btn-close[aria-label="Close dialog"]', {
+    timeout: 10_000,
+  });
+  await page.click('button.btn-close[aria-label="Close dialog"]');
+  console.log("   ↳ Modal closed.");
+  await page.waitForTimeout(1000); // brief pause for modal to fully dismiss
+} catch {
+  console.log("   ↳ No modal found, continuing…");
+}
+    
     console.log("   ↳ Waiting for download link to appear in DOM…");
     await page.waitForSelector('a[href^="/download/project"]', {
       state: "attached",
